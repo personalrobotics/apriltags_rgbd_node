@@ -1,0 +1,7 @@
+#! /usr/bin/env python
+
+import apriltags_rgbd_node.apriltag_rgbd_node as node
+import sys
+
+if __name__ == '__main__':
+    node.init(sys.argv)

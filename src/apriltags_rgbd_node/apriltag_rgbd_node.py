@@ -13,13 +13,14 @@ from message_filters import TimeSynchronizer, Subscriber, ApproximateTimeSynchro
 class apriltag_rgbd:
 	def __init__(self):
 		# Subscribers 
-		# self.marker_array_subscribe = rospy.Subscriber("/apriltags_kinect2/detections", AprilTagDetections, self.detection_callback)
-		# self.rgb_image_subscribe = rospy.Subscriber("/head/kinect2/qhd/image_color_rect", Image, self.rgb_callback)
-		# self.depth_image_subscribe = rospy.Subscriber("/head/kinect2/qhd/image_depth_rect", Image, self.depth_callback)
-		self.camera_info = rospy.Subscriber("/head/kinect2/qhd/camera_info", CameraInfo, self.camera_callback)
-		tss = ApproximateTimeSynchronizer([Subscriber("/head/kinect2/qhd/image_color_rect", Image),
-							   Subscriber("/head/kinect2/qhd/image_depth_rect", Image), 
-							   Subscriber("/apriltags_kinect2/detections", AprilTagDetections)], 1,0.5)
+		camera_info_topic = rospy.get_param("~camera_info", "/head/kinect2/qhd/")
+		color_topic = rospy.get_param("~image", "/head/kinect2/qhd/image_color_rect")
+		depth_topic = rospy.get_param("~depth", "/head/kinect2/qhd/image_depth_rect")
+		apriltag_topic = rospy.get_param("~apriltag_detection", "/apriltags_kinect2/detections")
+		self.camera_info = rospy.Subscriber(camera_info_topic, CameraInfo, self.camera_callback)
+		tss = ApproximateTimeSynchronizer([Subscriber(color_topic, Image),
+							   Subscriber(depth_topic, Image), 
+							   Subscriber(apriltag_topic, AprilTagDetections)], 1,0.5)
 		tss.registerCallback(self.processtag_callback)
 		# Vars
 		self.camera_intrinsics = None
@@ -31,8 +32,8 @@ class apriltag_rgbd:
 		self.bridge = CvBridge()
 
 		# Publisher
-		self.marker_publish = rospy.Publisher("/apriltags_kinect2/marker_array_fused", MarkerArray)
-		self.detection_publish = rospy.Publisher("/apriltags_kinect2/detections_fused", AprilTagDetections)
+		self.marker_publish = rospy.Publisher("/apriltags_kinect2/marker_array_fused", MarkerArray, queue_size=10)
+		self.detection_publish = rospy.Publisher("/apriltags_kinect2/detections_fused", AprilTagDetections, queue_size=10)
 		
 		# Debugger plot 
 		# self.fig = plt.figure()
@@ -65,18 +66,6 @@ class apriltag_rgbd:
 			self.detection_publish.publish(detection_msg)
 			self.marker_publish.publish(marker_msg)
 
-	# def rgb_callback(self, data):
-	# 	try:
-	# 		self.rgb_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-	# 	except CvBridgeError as e:
-	# 		print(e)
-
-	# def depth_callback(self, data):
-	# 	try:
-	# 		self.depth_image = self.bridge.imgmsg_to_cv2(data, "16UC1")
-	# 	except CvBridgeError as e:
-	# 		print(e)
-
 	def detection_callback(self, data):
 		all_detections = data.detections
 		detections_transformed = []
@@ -95,13 +84,13 @@ class apriltag_rgbd:
 
 
 
-def main(args):
+def init(args):
+	rospy.init_node('rgbd_node')
 	apriltag_transformer = apriltag_rgbd()
-	rospy.init_node('', anonymous=True)
 	try:
 		rospy.spin()
 	except KeyboardInterrupt:
 		print("Shutting down")
 
-if __name__ == '__main__':
-	main(sys.argv)
+# if __name__ == '__main__':
+# 	main(sys.argv)
